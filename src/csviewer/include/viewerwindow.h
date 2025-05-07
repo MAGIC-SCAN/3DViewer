@@ -94,6 +94,7 @@ private slots:
     void onTriggeredFormatConvert();
     void onTriggeredManual();
     void onTriggeredAbout();
+    void onTriggeredConfig();
     void onTriggeredGithub();
     void onTriggeredWebsite();
 

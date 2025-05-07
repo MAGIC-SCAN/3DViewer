@@ -27,6 +27,7 @@
 #include <QTranslator>
 #include <QThread>
 #include <QMessageBox>
+#include <QString>
 
 #include <cstypes.h>
 #include <icscamera.h>
@@ -43,6 +44,12 @@
 #include "cameraplayerdialog.h"
 #include "formatconvertdialog.h"
 #include "aboutdialog.h"
+
+#include <iostream>
+#include <fstream>
+#include <map>
+#include <cstdio>  // For std::FILE and std::fopen
+#include <string>
 
 #define GITHUB_URL "https://github.com/Revopoint/3DViewer"
 #define WEBSITE_URL "https://www.revopoint3d.com/"
@@ -129,6 +136,8 @@ void ViewerWindow::initConnections()
     suc &= (bool)connect(m_ui->actionGithub,            &QAction::triggered,   this, &ViewerWindow::onTriggeredGithub);
     suc &= (bool)connect(m_ui->actionWebSite,           &QAction::triggered,   this, &ViewerWindow::onTriggeredWebsite);
     suc &= (bool)connect(m_ui->actionAbout,             &QAction::triggered,   this, &ViewerWindow::onTriggeredAbout);
+
+    suc &= (bool)connect(m_ui->actionSaveConfig,        &QAction::triggered,   this, &ViewerWindow::onTriggeredConfig);
 
     suc &= (bool)connect(m_ui->actionTile,              &QAction::triggered,   this, &ViewerWindow::onTriggeredWindowsTile);
     suc &= (bool)connect(m_ui->actionTabs,              &QAction::triggered,   this, &ViewerWindow::onTriggeredWindowsTabs);
@@ -676,6 +685,98 @@ void ViewerWindow::onTriggeredAbout()
     }
 
     m_aboutDialog->show();
+}
+
+void ViewerWindow::onTriggeredConfig()
+{
+    std::map<std::string, std::string> config; //have separate for depth and rgb? property and property ext? ranges and values
+    auto cam = cs::CSApplication::getInstance()->getCamera();
+    QVariant value, value2, value3;
+
+    // cam->getCameraPara(cs::parameter::PARA_DEPTH_STREAM_FORMAT, value);
+    // config["depth format"] = value.toString().toStdString();
+    // cam->getCameraPara(cs::parameter::PARA_DEPTH_RESOLUTION, value);
+    // config["PROPERTY_EXT_SET_STREAM_RESOLUTION"] = value.toString().toStdString();
+    cam->getCameraParaRange(cs::parameter::PARA_DEPTH_RANGE, value, value2, value3);
+    // config["PROPERTY_EXT_DEPTH_RANGE"] = value.toString().toStdString()+", "+value2.toString().toStdString();
+    config["PROPERTY_EXT_DEPTH_RANGE min"] = value.toString().toStdString();
+    config["PROPERTY_EXT_DEPTH_RANGE max"] = value2.toString().toStdString(); 
+    cam->getCameraPara(cs::parameter::PARA_DEPTH_GAIN, value);
+    config["STREAM_TYPE_DEPTH, PROPERTY_GAIN"] = value.toString().toStdString();
+    cam->getCameraPara(cs::parameter::PARA_DEPTH_EXPOSURE, value);
+    config["STREAM_TYPE_DEPTH, PROPERTY_EXPOSURE"] = value.toString().toStdString();
+    cam->getCameraPara(cs::parameter::PARA_DEPTH_FRAMETIME, value);
+    config["STREAM_TYPE_DEPTH, PROPERTY_FRAMETIME"] = value.toString().toStdString();
+    cam->getCameraPara(cs::parameter::PARA_DEPTH_THRESHOLD, value);
+    config["PROPERTY_EXT_CONTRAST_MIN"] = value.toString().toStdString();
+    // cam->getCameraPara(cs::parameter::PARA_DEPTH_FILTER_TYPE, value);
+    // config["FILTER_TYPE"] = value.toString().toStdString(); //average, median, gaussian
+    // cam->getCameraPara(cs::parameter::PARA_DEPTH_FILTER, value);
+    // config["FILTER"] = value.toString().toStdString(); //filter lvl
+    cam->getCameraPara(cs::parameter::PARA_DEPTH_AUTO_EXPOSURE, value);
+    config["PROPERTY_EXT_AUTO_EXPOSURE_MODE"] = value.toString().toStdString();
+    // cam->getCameraPara(cs::parameter::PARA_DEPTH_FILL_HOLE, value);
+    // config["FILL_HOLE"] = value.toString().toStdString();
+    cam->getCameraPara(cs::parameter::PARA_DEPTH_HDR_MODE, value);
+    config["PROPERTY_EXT_HDR_MODE"] = value.toString().toStdString();
+    cam->getCameraPara(cs::parameter::PARA_DEPTH_HDR_LEVEL, value);
+    config["PROPERTY_EXT_HDR_SCALE_SETTING"] = value.toString().toStdString();
+    cam->getCameraPara(cs::parameter::PARA_DEPTH_SCALE, value);
+    config["PROPERTY_EXT_DEPTH_SCALE"] = value.toString().toStdString();
+    cam->getCameraPara(cs::parameter::PARA_DEPTH_HDR_SETTINGS, value);
+    config["PROPERTY_EXT_HDR_EXPOSURE"] = value.toString().toStdString();
+    // cam->getCameraPara(cs::parameter::PARA_DEPTH_ROI, value);//left top bottom right
+    // QRectF rect = value.toRectF();
+    // QString str = QString("[%1, %2, %3, %4]").arg(QString::number(rect.left(), 'f', 3))
+    //     .arg(QString::number(rect.top(), 'f', 3))
+    //     .arg(QString::number(rect.right(), 'f', 3))
+    //     .arg(QString::number(rect.bottom(), 'f', 3));
+    // config["PROPERTY_EXT_DEPTH_ROI"] = str.toStdString();
+    // cam->getCameraPara(cs::parameter::PARA_DEPTH_INTRINSICS, value);
+    // config["depth intrinsics"] = value.toString().toStdString(); 
+
+    // cam->getCameraPara(cs::parameter::PARA_RGB_STREAM_FORMAT, value);
+    // config["rgb format"] = value.toString().toStdString();
+    // cam->getCameraPara(cs::parameter::PARA_RGB_RESOLUTION, value);
+    // config["rgb resolution"] = value.toString().toStdString();
+    cam->getCameraPara(cs::parameter::PARA_RGB_GAIN, value);
+    config["STREAM_TYPE_RGB, PROPERTY_GAIN"] = value.toString().toStdString();
+    cam->getCameraPara(cs::parameter::PARA_RGB_EXPOSURE, value);
+    config["PROPERTY_EXT_EXPOSURE_TIME_RGB"] = value.toString().toStdString();
+    cam->getCameraPara(cs::parameter::PARA_RGB_AUTO_EXPOSURE, value);
+    config["STREAM_TYPE_RGB, PROPERTY_ENABLE_AUTO_EXPOSURE"] = value.toString().toStdString();
+    cam->getCameraPara(cs::parameter::PARA_RGB_AUTO_WHITE_BALANCE, value);
+    config["STREAM_TYPE_RGB, PROPERTY_ENABLE_AUTO_WHITEBALANCE"] = value.toString().toStdString();
+    cam->getCameraPara(cs::parameter::PARA_RGB_WHITE_BALANCE, value);
+    config["STREAM_TYPE_RGB, PROPERTY_WHITEBALANCE"] = value.toString().toStdString();
+    // cam->getCameraPara(cs::parameter::PARA_RGB_INTRINSICS, value);
+    // config["rgb intrinsics"] = value.toString().toStdString(); 
+
+    const std::string& filename = "camera_config.txt";
+    std::ofstream file;
+    std::FILE* filecheck = std::fopen(filename.c_str(), "r");
+
+    if (!filecheck) {
+        std::cout << "File does not exist. Creating new file.\n";
+        file.open(filename, std::ios::out);
+    } else {
+        std::cout << "File exists. Overwriting file.\n";
+        std::fclose(filecheck);
+        file.open(filename, std::ios::out);
+    }
+
+    if (!file.is_open()) {
+        std::cerr << "Failed to open the file.\n";
+        return;
+    }
+
+    // file << "Camera Configuration:\n";
+    for (std::map<std::string, std::string>::const_iterator it = config.begin(); it != config.end(); ++it) {
+        file << it->first << " : " << it->second << "\n";
+    }
+
+    file.close();
+    std::cout << "Configuration written successfully.\n";
 }
 
 void ViewerWindow::onTriggeredGithub()
